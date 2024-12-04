@@ -1,0 +1,45 @@
+{
+	"name": "Judges",
+	"password": "judges1"
+}
+
+
+{
+	"name": "Pel",
+	"password": "Pel1"
+}
+
+{
+	"name": "Genaro",
+	"password": "Genaro1"
+}
+
+{
+	"name": "Clotilde",
+	"password": "Clotilde1"
+}
+
+{
+	"name": "Virgilio",
+	"password": "Virgilio1"
+}
+
+{
+	"name": "Nicanora",
+	"password": "Nicanora1"
+}
+
+{
+	"name": "Avelino",
+	"password": "Avelino1"
+}
+
+{
+	"name": "Filomena",
+	"password": "Filomena1"
+}
+
+{
+	"name": "Gregorio",
+	"password": "Gregorio1"
+}
