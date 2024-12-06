@@ -76,7 +76,6 @@ const picturesByAuthor = async (req,res,next) => {
     }
 };
 
-
 const postPicture = async (req,res,next) => { 
    
     try {

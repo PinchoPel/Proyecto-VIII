@@ -3,12 +3,6 @@
 	"password": "judges1"
 }
 
-
-{
-	"name": "Pel",
-	"password": "Pel1"
-}
-
 {
 	"name": "Genaro",
 	"password": "Genaro1"
