@@ -13,11 +13,11 @@ USUARIOS
 
 Habrá dos tipos de usuarios: el juez o jueces y los participantes. Los jueces tendrán las facultades de administradores y los participantes serán usuarios con las funciones básicas.
 
-Mostrar todos los usuarios: permite ver a todos los participantes (excluyendo sus contraseñas) y al juez o jueces del concurso.
+Mostrar todos los usuarios: permite ver a todos los participantes (excluyendo sus contraseñas) y al juez o jueces del concurso. Si no se está logado, mostrará solo las fotografías verificadas de los participantes. Si se está logado como participante, se podrán ver las fotografías verificadas de todos los participantes y las no verificadas del propio participante si las hubiera. Si el logado es el juez, podrá ver a todos los participantes con todas sus fotografías.
 
 |NOMBRE| MÉTODO|ENDPOINT|LOGIN|BODY|CONTENT-TYPE|
 |-------|-------|--------|---|-----|----------
-|GET ALL USERS| GET|/users|no|---|--
+|GET ALL USERS| GET|/users|no/yes|---|--
 
 Mostrar un usuario: permite buscar un usuario en concreto por su nombre. Si no se está logado o quien realiza la búsqueda no es el propio usuario, no se mostrará la contraseña, solo la información básica. Si es el propio usuario logado, éste podrá ver su propia contraseña (encriptada).
 
@@ -71,6 +71,11 @@ Crear categorías: solo para el juez si considera que debe crearse alguna catego
 |-------|-------|--------|---|-----|----------
 |POST CATEGORY| POST|/categories|yes|{categoria,primer_premio,segundo_premio}|.json
 
+Modificar categorías: solo para el juez si considera que algún dato de alguna categoría debe ser modificado.
+|NOMBRE| MÉTODO|ENDPOINT|LOGIN|BODY|CONTENT-TYPE|
+|-------|-------|--------|---|-----|----------
+|PUT CATEGORY| PUT|/categories|yes|{categoria,primer_premio,segundo_premio, fotografias}|.json
+
 Borrar categoría: solo para jueces. Borra la categoría seleccionada, las fotos de la colección y las fotos asociadas a los usuarios. También elimina la subcarpeta de Cloudinary.
 
 |NOMBRE| MÉTODO|ENDPOINT|LOGIN|BODY|CONTENT-TYPE|
@@ -79,7 +84,7 @@ Borrar categoría: solo para jueces. Borra la categoría seleccionada, las fotos
 
 FOTOGRAFÍAS
 
-Subir una nueva fotografía: permite publicar una fotografía solo para usuarios logados. Se ha establecido un límite de dos fotografías como máximo por paticipante, ambas fotografías podrán subirse a una única categoría.  Se debe indicar la categoría en la que se quiere participar con la fotografía y elegir el título. La fotografía quedará pendiente de verificación por el juez. La dirección de cloudinary se guardará en el registro de usuario y el título en la propia categoría.En Cloudinary la subcarpeta equivaldrá a la categoría.
+Subir una nueva fotografía: permite publicar una fotografía solo para usuarios logados. Se ha establecido un límite de dos fotografías como máximo por paticipante, ambas fotografías podrán subirse a una única categoría.  Se debe indicar la categoría en la que se quiere participar con la fotografía y elegir el título. La fotografía quedará pendiente de verificación por el juez. La fotografía y sus datos se guardará en el registro de usuario así como en la propia categoría.En Cloudinary la subcarpeta equivaldrá a la categoría.
 
 |NOMBRE| MÉTODO|ENDPOINT|LOGIN|BODY|CONTENT-TYPE|
 |-------|-------|--------|---|-----|----------

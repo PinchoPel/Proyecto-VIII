@@ -7,8 +7,21 @@ const bcrypt = require("bcrypt");
 
 const getAllUser = async (req,res,next) => {
     try {
-        const allUsers = await User.find().select("-password");
-        return res.status(200).json(allUsers);
+        if (req.user) {
+            let {role, name} = req.user;
+            if (role == "judges") {
+                const allUsers = await User.find().select("-password").populate("photos");
+                return res.status(200).json(allUsers);
+            }
+            else if (role == "contestant" && name) {
+                const allUsers = await User.find().select("-password").populate({path: "photos", match: {$or: [{verificado: true} ,{ autor: name}]}});;
+                return res.status(200).json(allUsers);
+            }        
+        }
+        else if (!req.user) {
+            const allUsers = await User.find().select("-password").populate({path: "photos", match: {verificado: true} });
+            return res.status(200).json(allUsers);
+        }       
     } catch (error) {
         return res.status(400).json("Ha fallado la petición")
     }
@@ -16,27 +29,28 @@ const getAllUser = async (req,res,next) => {
 
 const getUser = async (req,res,next) => { 
     try {
-        let {authorName} = req.params;
-        const user = await User.findOne({ name: authorName });
-        if (!user) {
-            return res.status(404).json({ message: "Usuario no encontrado" });
-        }
+        let {nombre} = req.params;     
         if (req.user) {
-            let {name} = req.user;
-            if (name == authorName) {
-                return res.status(200).json(user); 
+            let {name, role} = req.user;      
+            if (role == "contestant" && name) {
+                const singleUser = await User.findOne({ name: nombre }).select("-password").populate({path: "photos", match: {$or: [{verificado: true} ,{ autor: name}]}});   
+                return res.status(200).json(singleUser);
             }
-            else if (name !== authorName) {
-                let { password, ...authorProfile } = user.toObject();  
-            return res.status(200).json(authorProfile);
+            else if (role == "judges") {
+                const singleUser = await User.findOne({ name: nombre }).select("-password").populate("photos");
+                return res.status(200).json(singleUser);
+            }          
+            else{
+                const singleUser = await User.findOne({ name: nombre }).select("-password").populate({path: "photos", match: {verificado: true} });
+                return res.status(200).json(singleUser);
             }
         }
-        else if(!req.user){
-            let { password, ...authorProfile } = user.toObject();  
-            return res.status(200).json(authorProfile);
-        }
+        else if (!req.user) {
+            const singleUser = await User.findOne({ name: nombre }).select("-password").populate({path: "photos", match: {verificado: true} });
+            return res.status(200).json(singleUser);
+        } 
     } catch (error) {
-        return res.status(400).json("Ha fallado la petición")
+        return res.status(404).json({ message: "Usuario no encontrado" });
     }
 };
 
@@ -83,34 +97,33 @@ const login = async (req,res,next) => {
 const modifyUser = async (req,res,next) => { 
 
     try {
-        let {userName} = req.params;
-        const userToModify = await User.findOne({ name: userName });
+        let {nombre} = req.params;
+        const userToModify = await User.findOne({ name: nombre });
         
         if (!userToModify) {
             return res.status(404).json({ message: "Usuario no encontrado" });
         }  
         else if (req.user){
-            let {name} = req.user;
-            let {role} = req.user;
-        if (userName == name){
-            if (req.body.password) {
-                let {password} = req.body
-              userToModify.password = password;
-                await userToModify.save();
-                return res.status(200).json(userToModify); 
+            let {name, role} = req.user;
+            if (nombre == name){
+                if (req.body.password) {
+                    let {password} = req.body
+                    userToModify.password = password;
+                    await userToModify.save();
+                    return res.status(200).json(userToModify); 
+                }
+                else if (req.body.name) {
+                        return res.status(403).json("No se puede cambiar el nombre del usuario");
+                    }
+                else if (req.body.role) {
+                    return res.status(403).json("Autorización insuficiente");
+                }
             }
-           else if (req.body.name) {
-                return res.status(403).json("No se puede cambiar el nombre del usuario");
-              }
-              else if (req.body.role) {
-                return res.status(403).json("Autorización insuficiente");
-              }
-        }
         else if (role == "judges") {
-            let updatedUser = await User.findOneAndUpdate({ name: userName }, {...req.body}, {new:true, runvalidators: true});
+            let updatedUser = await User.findOneAndUpdate({ name: nombre }, {...req.body}, {new:true, runvalidators: true});
             return res.status(200).json(updatedUser);
         }
-        if (userName !== name){
+        if (nombre !== name){
             return res.status(404).json({ message: "Datos incorrectos" });
         }}
         else if(!req.user){
@@ -122,66 +135,38 @@ const modifyUser = async (req,res,next) => {
 };
 
 const userDelete = async (req,res,next) => { 
-    let {userDeleted} = req.params; 
-    const userToDelete = await User.findOne({ name: userDeleted });
-    try {
-       
+    let {nombre} = req.params; 
+    const userToDelete = await User.findOne({ name: nombre });
+    try {  
         if (!userToDelete) {
             return res.status(404).json({ message: "Usuario no encontrado" });
         } 
         else if (req.user){
-            let {name} = req.user;
-            let {role} = req.user;
+            let {name, role} = req.user;
 
-         if (userDeleted == name) {
-            
-            for (const photoUrl of userToDelete.photos) {  
-               delCloudinary(photoUrl)
-            };
+            if (nombre == name || role == "judges") {               
+                let userPhotos = await User.find({name: nombre})
 
-            const userPhotos = await Photo.find({ autor: userDeleted });
+                for (const photoId of userPhotos[0].photos) {
+                    await Category.updateMany(
+                        { fotografias: photoId._id },
+                        { $pull: { fotografias: photoId._id } }
+                    );                                     
+                   let photoUrl = await Photo.findById(photoId);   
+                   delCloudinary(photoUrl.imagen)  
+                }
 
-            for (const photo of userPhotos) { 
-                
-                await Category.updateMany(
-                    { fotografias: photo.titulo },
-                    { $pull: { fotografias: photo.titulo } }
-                );
+                await Photo.deleteMany({ _id: { $in: userPhotos[0].photos }});
+                await User.findOneAndDelete({ name: nombre }); 
+
+                res.status(200).json({ message: `El usuario '${userPhotos[0].name}' y sus fotos han sido eliminados correctamente` });
             }
-
-            await Photo.deleteMany({ autor: userDeleted }); 
-        
-            await User.findOneAndDelete({ name: userDeleted }); 
-
-            res.status(200).json({ message: `El usuario '${userDeleted}' y sus fotos han sido eliminados correctamente` });
-        }
-       else if (role == "judges") {
-
-        for (const photoUrl of userToDelete.photos) {  
-            delCloudinary(photoUrl)
-         };
-
-         const userPhotos = await Photo.find({ autor: userDeleted });
-
-            for (const photo of userPhotos) { 
-                await Category.updateMany(
-                    { fotografias: photo.titulo },
-                    { $pull: { fotografias: photo.titulo } }
-                );
+            else if(!req.user){
+            return res.status(400).json("No permitido")
             }
-
-            await Photo.deleteMany({ autor: userDeleted }); 
-        
-            await User.findOneAndDelete({ name: userDeleted }); 
-
-            res.status(200).json({ message: `El usuario '${userDeleted}' y sus fotos han sido eliminados correctamente` });
-       }
-       else if (userDeleted !== name){
-        return res.status(400).json("No permitido")
-       }}
-       else if(!req.user){
-        return res.status(400).json("No permitido")
-    }
+            else{
+                return res.status(400).json("No permitido")
+            }}
     } catch (error) {
         return res.status(400).json("Usuario o contraseña incorrectos")
     }

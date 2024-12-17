@@ -1,15 +1,17 @@
 
-const { checkRole } = require("../../middlewares/chekRole");
-const { getAllCategories, postCategory, deleteCategory, getSingleCategory } = require("../controllers/categories");
+const { auth } = require("../../middlewares/auth");
+const { getAllCategories, postCategory, deleteCategory, getSingleCategory, modifyCategory } = require("../controllers/categories");
 
 
 const categoriesRoutes = require("express").Router();
 
-categoriesRoutes.get("/:categoria", [checkRole], getSingleCategory);
-categoriesRoutes.get("/",[checkRole], getAllCategories);
+categoriesRoutes.get("/:categoria", [auth], getSingleCategory);
+categoriesRoutes.get("/",[auth], getAllCategories);
 
-categoriesRoutes.post("/",[checkRole], postCategory);
+categoriesRoutes.post("/",[auth], postCategory);
 
-categoriesRoutes.delete("/:categoria",[checkRole], deleteCategory);
+categoriesRoutes.put("/:categoria", [auth], modifyCategory);
+
+categoriesRoutes.delete("/:categoria",[auth], deleteCategory);
 
 module.exports = categoriesRoutes;

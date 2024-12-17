@@ -3,9 +3,8 @@ const Photo = require("../api/model/pictures");
 
 let maxPhotos = async (req,res,next) => {
     try {
-    let userName = req.user.name;
 
-    let limitPhotos = await Photo.countDocuments({autor: userName});
+    let limitPhotos = await Photo.countDocuments({autor: req.user.name});
 
     if (limitPhotos >= 2) {
     return res.status(400).json({message: "Máximo dos fotos por participante"})
@@ -17,6 +16,5 @@ let maxPhotos = async (req,res,next) => {
         return res.status(400).json("No se ha subido la fotografía")
     }
 };
-
 
 module.exports = {maxPhotos};

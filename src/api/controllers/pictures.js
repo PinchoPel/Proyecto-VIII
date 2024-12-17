@@ -8,34 +8,25 @@ const cloudinary = require("cloudinary").v2;
 const allPictures = async (req,res,next) => {
     try {
         if (req.user){
-            let {role} = req.user;
-            let { name } = req.user;
+            let {role, name} = req.user;
             if (role == "judges") {
                 let allPhotos = await Photo.find(); 
                 return res.status(200).json(allPhotos);
             }
-            else if (name && role == "contestant") {
-                console.log("punto1");
-                
+            else if (name && role == "contestant") {             
                 let ownPhotos = await Photo.find( {
                     $or: [
                         { verificado: true }, 
                         { autor: name } 
                     ]
-                })
-                console.log(ownPhotos);
-                
+                })            
                 return res.status(200).json(ownPhotos);
-            }
-            else if (role == "contestant" ){
-                let  allPhotos = await Photo.find({verificado: true});
-                return res.status(200).json(allPhotos);
             }
         }
         else  if(!req.user){   
             let  allPhotos = await Photo.find({verificado: true});       
               return res.status(200).json(allPhotos);
-          }
+        }
     } catch (error) {
         return res.status(400).json("No se han cargado las imágenes")
     }
@@ -44,10 +35,8 @@ const allPictures = async (req,res,next) => {
 const picturesByAuthor = async (req,res,next) => { 
     try {
         let {nombre} = req.params;
-
         if (req.user){
-            let {role} = req.user;
-            let { name } = req.user;
+            let {role,name} = req.user;
             
             if (role == "judges"){
                 let authorPhotos = await Photo.find(  
@@ -55,8 +44,12 @@ const picturesByAuthor = async (req,res,next) => {
                 return res.status(200).json(authorPhotos);
             }
             else if (nombre == name && role == "contestant"){   
-                let ownPhotos = await Photo.find(  
-                        { autor: name } )     
+                let ownPhotos = await Photo.find( {
+                    $or: [
+                        { verificado: true }, 
+                        { autor: name } 
+                    ]
+                })     
                 return res.status(200).json(ownPhotos);
             }
             else if (role == "contestant" ){
@@ -67,8 +60,7 @@ const picturesByAuthor = async (req,res,next) => {
         else  if(!req.user){
             let authorPhotos = await Photo.find(  
                 { autor: nombre,
-                verificado: true}
-            )
+                verificado: true})
             return res.status(200).json(authorPhotos);
         }
     } catch (error) {
@@ -89,27 +81,30 @@ const postPicture = async (req,res,next) => {
                     public_id: req.body.titulo});
               
             let newPhoto = new Photo({
-             titulo: req.body.titulo,
+            titulo: req.body.titulo,
             imagen: imagenUrl.secure_url,
             autor: req.user.name,
-             }  );
+             });
             
             let savedPhoto = await newPhoto.save();
         
-            category.fotografias.push(newPhoto.titulo);
-            await category.save();
+            await Category.findOneAndUpdate(
+                { categoria: categoryName }, 
+                { $push: { fotografias: newPhoto._id} }, 
+                { new: true } 
+            );   
 
             await User.findOneAndUpdate(
                 { name: req.user.name }, 
-                { $push: { photos: newPhoto.imagen } }, 
+                { $push: { photos: newPhoto._id} }, 
                 { new: true } 
             );         
 
             return res.status(201).json(savedPhoto);
         }
-    else if(!req.user){
-        return res.status(400).json("Sin acceso")
-    }
+        else if(!req.user){
+            return res.status(400).json("Sin acceso")
+        }
     } catch (error) {
         return res.status(400).json("No se ha subido la fotografía")
     }
@@ -117,7 +112,6 @@ const postPicture = async (req,res,next) => {
 
 const modifyPicture = async (req,res,next) => {           
     let {titulo} = req.params;
-
     try {
         if (req.user){
             let {role} = req.user;
@@ -126,11 +120,8 @@ const modifyPicture = async (req,res,next) => {
                 let modifiedPicture = await Photo.findOneAndUpdate({titulo: titulo},{...req.body},{new: true,runvalidators: true});         
                 return res.status(200).json(modifiedPicture);
             }
-                  else{
-                    return res.status(403).json("Autorización insuficiente");
-                  }
         }
-        else if(!req.user){
+        else if(!req.user || role == "contestant"){
             return res.status(400).json("Sin acceso")
         }
     } catch (error) {
@@ -139,54 +130,44 @@ const modifyPicture = async (req,res,next) => {
 };
 
 const deletePicture = async (req, res,next) => { 
-  try {
-    let {id} = req.params;
-    if (req.user){
-    let {role} = req.user;
-    let { name } = req.user;
-    if (role === "judges") {
-        let deletedPicture = await Photo.findByIdAndDelete(id);   
-        
-        await Category.updateMany(
-            { fotografias: deletedPicture.titulo },
-            { $pull: { fotografias: deletedPicture.titulo } }
-        );
+    try {
+        let {id} = req.params;
 
-        await User.updateMany(
-            { photos: deletedPicture.imagen  },
-            { $pull: { photos:  deletedPicture.imagen  } }
-        );
-    
-        delCloudinary(deletedPicture.imagen);
-    
-        return res.status(200).json({message: "foto borrada de su colección y de cualquier categoría asociada", deletedPicture});
-    }
-    else if (role === "contestant") {
-        let photosByAuthor = await Photo.findOne({autor: name}) ;
-        if (photosByAuthor.autor == name) {
-            let deletedPicture = await Photo.findByIdAndDelete(id); 
-            console.log(deletedPicture.imagen);
+        if (req.user){
+        let {role, name} = req.user;
+        let deletedPicture = await Photo.findById(id);  
+        let deleteFunction = async (deletedPicture) =>{
+                
             await Category.updateMany(
-                { fotografias: deletedPicture.titulo },
-                { $pull: { fotografias: deletedPicture.titulo } }
+                { fotografias: deletedPicture._id },
+                { $pull: { fotografias: deletedPicture._id } }
             );
-
             await User.updateMany(
-            { photos: deletedPicture.imagen  },
-            { $pull: { photos:  deletedPicture.imagen  } }
-        );
-        
+                { photos: deletedPicture._id  },
+                { $pull: { photos:  deletedPicture._id } }
+            );
             delCloudinary(deletedPicture.imagen);
-     
+            
+            await Photo.findByIdAndDelete(id);
+
             return res.status(200).json({message: "foto borrada de su colección y de cualquier categoría asociada", deletedPicture});
+        } 
+        if (role === "judges") {
+            await deleteFunction(deletedPicture);       
         }
-    }}
-    else if(!req.user){
-        return res.status(400).json("Sin acceso")
-    }
-  } catch (error) {
-    return res.status(400).json("No se ha borrado la fotografía")
-  }  
+        else if (role === "contestant") {
+            let photosByAuthor = await Photo.findOne({autor: name}) ;
+
+            if (photosByAuthor.autor == name) {
+                await deleteFunction(deletedPicture);
+            }
+        }}
+        else if(!req.user){
+            return res.status(400).json("Sin acceso")
+        }
+    } catch (error) {
+        return res.status(400).json("No se ha borrado la fotografía")
+    }  
 };
 
 module.exports = {postPicture,allPictures,picturesByAuthor,deletePicture,modifyPicture};

@@ -5,7 +5,7 @@ const Photo = require("./pictures");
 const userSchema = new mongoose.Schema({
     name: {type: String, required: true},
     password: {type: String, required: true},
-    photos: [{type:String}],
+    photos: [{type: mongoose.Schema.Types.ObjectId, ref: Photo}],
     role: {type: String, required:true, enum:["judges","contestant"]}
 },{
     timestamps: true,

@@ -1,6 +1,5 @@
 const Category = require("../api/model/categories");
 
-
 const checkCategory = async (req,res,next) => {
     let  {categoryName} = req.params;
 

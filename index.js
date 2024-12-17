@@ -4,7 +4,6 @@ const { connectDB } = require("./src/config/db");
 const connectCloudinary = require("./src/config/cloudinary");
 const mainRoutes = require("./src/utils/mainRoutes");
 
-
 const app = express();
 connectDB();
 connectCloudinary();
@@ -21,4 +20,6 @@ app.use("*", (req,res,next) => {
     return res.status(404).json("Ruta no encontrada")
 });
 
-app.listen(3000, () =>{});
+app.listen(3000, () =>{
+    console.log("Servidor conectado en http://localhost:3000/");  
+});
